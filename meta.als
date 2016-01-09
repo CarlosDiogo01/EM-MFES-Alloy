@@ -29,18 +29,22 @@ open util/ordering[Estado] as E
  
 sig Estado{}
  
+//Um modelo em alloy é composto por um comjunto de assinaturas
 sig Model {
 	sigs : set Signature
 }
- 
+
+// Cada assinatura, tem um só nome 
 sig Signature {
-	name : one Name
+	nameSig : one Name
 }
- 
+
+// Assinatura não precisa de tipos nem de nenhum campo 
 sig Name {}
   
+
 sig Atom {
-	name2 : one Name
+	nameAtom : one Name
 }
  
 sig Instance {
@@ -50,11 +54,11 @@ sig Instance {
  
 pred solve [m : Model, i : Instance, e : Estado] {
 	-- os nomes dos atomos de uma dada instancia têm de ser nomes de assinaturas de um modelo
-	(i.atom.e).(name2) in (m.sigs).(name)
+	(i.atom.e).(nameAtom) in (m.sigs).(nameSig)
 }
  
 pred valid[m : Model] {
-	all n : Name | lone name.n & m.sigs
+	all n : Name | lone nameSig.n & m.sigs
 }
  
 pred invs [e : Estado]{
@@ -94,7 +98,8 @@ pred addAtoms[e,e':Estado, a : Atom, i : Instance]{
 	--frame
 }
  
--- run { some e,e' : Estado, i : Instance,  a : Atom | addAtoms[e, e', a, i] } for 3 but exactly 1 Model, exactly 2 Estado
+run { some e,e' : Estado, i : Instance,  a : Atom | addAtoms[e, e', a, i] }
+for 3 but exactly 1 Model, exactly 2 Estado
  
 --check addAtoms {
 	--all e,e' : Estado, a : Atom, i : Instance | invs[e] and  addAtoms[e, e', a, i] => invs[e']
@@ -137,8 +142,6 @@ check {
 -- subset
 
 -- equality
-
-
 
 
 
