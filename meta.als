@@ -1,48 +1,36 @@
-/*
-Neste trabalho pretende-se um exercício de meta-modelação: utilizar o Alloy para especificar o próprio Alloy!
 
-Segue um exemplo do que se pretende. Neste exemplo temos uma especificação muito
-simplificada de:
-- Modelos Alloy (apenas parte estrutural)
-- Predicado que testa a validade de um modelo Alloy (neste caso apenas verifica que as sigs têm nomes únicos)
-- Instâncias dos referidos modelos
-- Operação de solve, que testa se uma instância é válida para um dado modelo
- 
-Para além de melhorar esta especificação podem especificar operações e predicados tais como:
- - Verificar conformidade com idiomas (por exemplo testar se um modelo está conforme o local state idiom)
- - Refactorings vários (por exemplo, de local state para global state idiom)
-*/
-
+open util/ordering[Estado] as E
+open util/boolean
 
 ----- Alloy Work MFES 2015 ----
 -- by
 -- Sérgio Caldas
 -- Filipe Oliveira
 -- Carlos Sá
-
-
-----------------------------------------------------------------------------------
--- Falta distinguir o global state e o local state (um está feito)
-----------------------------------------------------------------------------------
  
-open util/ordering[Estado] as E
+sig Estado{
+	-- global state in our model implies, from one state to all instances
+	global : set ( Estado -> Instance ) ,
+	-- local state in our model implies, from lone instance to one state
+	local : set ( Instance -> Estado )
+}
  
-sig Estado{}
- 
-//Um modelo em alloy é composto por um comjunto de assinaturas
+//an alloy model is composed by a set of signatures
 sig Model {
-	sigs : set Signature
+	sigs : set Signature,
+	states: one Estado,
+	instances: set Instance
 }
 
-// Cada assinatura, tem um só nome 
+// each signature has name 
 sig Signature {
 	nameSig : one Name
 }
 
-// Assinatura não precisa de tipos nem de nenhum campo 
-sig Name {}
-  
+sig Name {
 
+}
+  
 sig Atom {
 	nameAtom : one Name
 }
@@ -51,9 +39,37 @@ sig Instance {
 	atom : set Atom -> Estado,
 	instance : set Estado
 }
- 
+
+pred checkLocal[m1:Model] { 
+ some  m1.states.local
+}
+
+pred checkGlobal[m1:Model] { 
+ some  m1.states.global
+}
+
+pred addGlobal [m1:Model,i1:Instance, s1:Estado]{
+	m1.states.global = m1.states.global+(s1->i1)
+}
+
+pred addLocal [m1:Model,i1:Instance, s1:Estado]{
+	m1.states.local = m1.states.local+(i1->s1)
+}
+
+pred fromLocalGlobal[m1:Model]{
+	all locais : m1.states.local , e1: Estado | addGlobal[m1, locais.e1, e1 ]
+}
+
+pred fromGlobalLocal[m1:Model]{
+	all global : m1.states.global , i1: Instance | addLocal[m1, i1 , global.i1 ]
+}
+
+pred refactor [m1: Model]{
+ 	checkLocal [m1] => fromLocalGlobal[m1] else fromGlobalLocal[m1]
+}
+
 pred solve [m : Model, i : Instance, e : Estado] {
-	-- os nomes dos atomos de uma dada instancia têm de ser nomes de assinaturas de um modelo
+	-- every signature name must be different and they all should be part of the signatures
 	(i.atom.e).(nameAtom) in (m.sigs).(nameSig)
 }
  
@@ -61,50 +77,34 @@ pred valid[m : Model] {
 	all n : Name | lone nameSig.n & m.sigs
 }
  
-pred invs [e : Estado]{
-	-- Todas as sigs fazem parte de um modelo
+pred invs [ e : Estado]{
+	-- every sig make part of the model
 	all s : Signature | s in Model.sigs 
 	all m : Model | valid[m]
+	all a : Atom , m : Model | a in (m.instances.atom).e 
+--	some a: Atom , m : Model | lone a.(m.instances.atom)
+	all n : Name , m : Model | n in ((m.instances.atom).e).nameAtom
+	all m : Model | some m.states.local implies no m.states.global
+	all m : Model | some m.states.global implies no m.states.local
+	all i : Instance , m: Model | i in m.instances
+	----
 	all m : Model, i : Instance | solve[m, i, e]
-	-- Todos os atomos fazem parte de uma instancia
-	-- uma instancia tem de estar associada a um modelo (como fazer?)
-	all a : Atom | a in (Instance.atom).e 
+
 }
--- invariantes
+-- invariants
 fact invs1 {
 	all e : Estado | invs[e]
 }
  
-----------------------------------------------------------------------------------
--- Será que estes predicados são sobre os atomos ou sobre as instancias?
-----------------------------------------------------------------------------------
- 
-pred mantemAtoms[e,e' : Estado, i : Instance]{
-	i.atom.e' = i.atom.e
-}
- 
--- run { some e,e' : Estado, i : Instance | mantemAtoms[e, e', i] } for 3 but exactly 1 Model, exactly 2 Estado
- 
---check addAtoms {
-	--all e,e' : Estado, a : Atom, i : Instance | invs[e] and  addAtoms[e, e', a, i] => invs[e']
---}
- 
 pred addAtoms[e,e':Estado, a : Atom, i : Instance]{
 	--pre
 	a not in i.(atom.e)
+	no i.(atom.e)
 	--pos
 	atom.e' = atom.e + i -> a
 	instance.e' = instance.e + i
 	--frame
 }
- 
-run { some e,e' : Estado, i : Instance,  a : Atom | addAtoms[e, e', a, i] }
-for 3 but exactly 1 Model, exactly 2 Estado
- 
---check addAtoms {
-	--all e,e' : Estado, a : Atom, i : Instance | invs[e] and  addAtoms[e, e', a, i] => invs[e']
---}
- 
  
 pred excludeAtoms[e,e' : Estado, i : Instance]{
 	--pre
@@ -115,53 +115,39 @@ pred excludeAtoms[e,e' : Estado, i : Instance]{
 	--frame
 }
  
-check excludeAtoms {
-	all e,e' : Estado, i : Instance | invs[e] and  excludeAtoms[e,e',i] => invs[e']
-} for 3 but exactly 2 Estado
- 
-run excludeAtoms {
-	some e,e' : Estado, i : Instance | invs[e] and   excludeAtoms[e,e',i]
-} for 3 but exactly 2 Estado
- 
- 
-run {some Model} for 3 but 1 Model
- 
-check {
-	--all n : Name | lone name.n
-}  for 3 but 1 Model
-
-
-/** Logic Set Operators **/
-
--- union	
-
--- intersection
-
--- difference
-
--- subset
-
--- equality
-
 
 
 /*** Operations over binary relations ***/
 
 -- union
-assert union {
-	all s: set univ, r1, r2: univ -> univ | s.(r1 + r2) = s.r1 + s.r2
+pred union[e,e' : Estado, i1,i2,i3 : Instance] {
+	--pre
+	i1 in instance.e =>	i1 in instance.e' &&
+	i2 in instance.e =>	i2 in instance.e' &&
+	--pos
+	let  i3 = i1 + i2  | i3 in instance.e'
+	--frame
 }
 
 -- intersection
-assert intersection {
-	all s : set univ, r1, r2 : univ -> univ | s.(r1 & r2) = s.r1 & s.r2
+pred intersection[e,e' : Estado, i1,i2,i3 : Instance]  {
+--pre
+	i1 in instance.e =>	i1 in instance.e' &&
+	i2 in instance.e =>	i2 in instance.e' &&
+	--pos
+	let  i3 = i1 & i2  | i3 in instance.e'
+	--frame
 }
 
 --difference
-assert dif {
-	all s : set univ, r1,r2 : univ -> univ | s.(r1-r2) = s.r1 - s.r2
+pred difference [e,e' : Estado, i1,i2,i3 : Instance]  {
+--pre
+	i1 in instance.e =>	i1 in instance.e' &&
+	i2 in instance.e =>	i2 in instance.e' &&
+	--pos
+	let  i3 = i1 - i2  | i3 in instance.e'
+	--frame
 }
-
 
 -- Binary relations
 pred br {
@@ -176,3 +162,20 @@ pred br {
     univ in univ.relation  		// onto
 	}
 }
+
+------------------
+-- run and checks --
+------------------
+
+run {  some e,e' : Estado, i : Instance,  a : Atom | invs[e] and addAtoms[e, e', a, i] }
+for 5 but exactly 1 Model, exactly 5 Estado
+
+run { some e,e' : Estado, i : Instance,  a : Atom | addAtoms[e, e', a, i] }
+for 3 but exactly 1 Model, exactly 2 Estado
+
+
+ 
+check {
+	all n : Name | lone name.n
+}  for 3 but 1 Model
+
