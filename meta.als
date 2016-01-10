@@ -176,6 +176,6 @@ for 3 but exactly 1 Model, exactly 2 Estado
 
  
 check {
-	all n : Name | lone name.n
+	--all n : Name | lone name.n
 }  for 3 but 1 Model
 
