@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<alloy>
+
+<view>
+
+<projection> <type name="Estado"/> </projection>
+
+<defaultnode/>
+
+<defaultedge/>
+
+<node>
+   <type name="Estado"/>
+   <type name="Int"/>
+   <type name="Name"/>
+   <type name="String"/>
+   <type name="univ"/>
+   <type name="boolean/True"/>
+   <type name="E/Ord"/>
+   <type name="seq/Int"/>
+   <set name="$a" type="Atom"/>
+   <set name="$e" type="Estado"/>
+   <set name="$e&apos;" type="Estado"/>
+   <set name="$i" type="Instance"/>
+   <set name="First" type="E/Ord"/>
+   <set name="global" type="Instance"/>
+   <set name="instance" type="Instance"/>
+   <set name="local" type="Instance"/>
+   <set name="Next" type="E/Ord"/>
+   <set name="states" type="Model"/>
+</node>
+
+<node shape="Dbl Circle" color="Green">
+   <type name="Atom"/>
+</node>
+
+<node shape="Hexagon" color="White">
+   <type name="Signature"/>
+</node>
+
+<node shape="Inv House" color="Red">
+   <type name="Instance"/>
+</node>
+
+<node style="Bold" shape="House" color="Blue">
+   <type name="Model"/>
+</node>
+
+<node visible="no" numberatoms="no">
+   <type name="boolean/Bool"/>
+   <type name="boolean/False"/>
+</node>
+
+</view>
+
+</alloy>
